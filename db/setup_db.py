@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 import hashlib
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///vuln_db.sqlite"
+app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///vuln_db.sqlite'
 db = SQLAlchemy(app)
 
 def add_users(db:SQLAlchemy, users):
@@ -37,24 +37,24 @@ class Product(db.Model):
         self.quantity = quantity
 
 
+with app.app_context():
+    db.create_all()
+    users = [
+        {'username': "user", 'password': "user_password", "admin": False},
+        {'username': "user2", 'password': "user2_password", "admin": False},
+        {'username': "flask_admin", 'password': "password@123", "admin": True},
+    ]
 
-db.create_all()
-users = [
-    {'username': "user", 'password': "user_password", "admin": False},
-    {'username': "user2", 'password': "user2_password", "admin": False},
-    {'username': "flask_admin", 'password': "password@123", "admin": True},
-]
+    products = [
+        Product("Orange", 1.99, 10),
+        Product("Apple", .99, 10),
+        Product("Peach", .89, 4),
+        Product("Watermelon", 4.5, 6),
+        Product("Strawberry", 1.89, 30)
+    ]
 
-products = [
-    Product("Orange", 1.99, 10),
-    Product("Apple", .99, 10),
-    Product("Peach", .89, 4),
-    Product("Watermelon", 4.5, 6),
-    Product("Strawberry", 1.89, 30)
-]
+    add_users(db, users)
 
-add_users(db, users)
-
-for product in products:
-    db.session.add(product)
-db.session.commit()
+    for product in products:
+        db.session.add(product)
+    db.session.commit()

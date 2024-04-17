@@ -2,12 +2,14 @@ from crypt import methods
 from flask import Flask, render_template, request, session, redirect, abort
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
+from sqlalchemy.orm import sessionmaker
 from pathlib import Path
 import hashlib
 import os
 
 app = Flask(__name__, static_url_path="/static")
-app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///db/vuln_db.sqlite"
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vuln_db.sqlite'
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 db = SQLAlchemy(app)
@@ -81,7 +83,11 @@ def sqli_login():
         password = request.form.get("password")
         password = hashlib.md5(password.encode()).hexdigest()
 
-        rs = db.engine.execute("SELECT * from users WHERE username='"+username+"' AND password='"+password+"'").all()
+        # Creazione sessione al posto di 'db.engine' (non più supportato)
+        Session = sessionmaker(bind=db.engine)
+        session_db = Session()
+
+        rs = session_db.execute(text("SELECT * from users WHERE username='"+username+"' AND password='"+password+"'")).all()
 
         if len(rs) != 0:
             if rs[0][3] == 1:
@@ -106,11 +112,17 @@ def sqli_products():
         abort(401)
 
     message = "You are logged in as admin, congratulation!" if session["admin"] else "You are logged in as normal user"
+
+    Session = sessionmaker(bind=db.engine)
+    session_db = Session()
+
     if "product_name" in request.form:
-        rs = db.engine.execute("SELECT * from products WHERE name LIKE'"+request.form.get("product_name")+"%'").all()
+        result = session_db.execute(text("SELECT * from products WHERE name LIKE'"+request.form.get("product_name")+"%'"))
     else:
-        rs = db.engine.execute("SELECT * from products").all()
-    columns = list(rs[0].keys())[1:]
+        result = session_db.execute(text("SELECT * from products"))
+    
+    rs = result.fetchall()
+    columns = result.keys()
 
 
     return render_template("sqli/products.html", rows=rs, columns=columns, message=message)
